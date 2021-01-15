@@ -98,20 +98,31 @@ class Main(Frame):
         root_menu.add_cascade(label='File', menu=self.file_menu)
         root_menu.add_cascade(label='Edit', menu=self.edit_menu)
         #file menu items
-        self.file_menu.add_command(label='New File', command=self.new_command)
-        self.file_menu.add_command(label='Open...', command=self.open_command)
+        self.file_menu.add_command(label='New File', command=self.new_command,
+                                   accelerator='Ctrl+N')
+        self.file_menu.add_command(label='Open...', command=self.open_command,
+                                   accelerator='Ctrl+O')
         self.file_menu.add_separator()
-        self.file_menu.add_command(label='Save', command=self.save_command)
-        self.file_menu.add_command(label='Save As...', command=self.saveas_command)
+        self.file_menu.add_command(label='Save', command=self.save_command,
+                                   accelerator='Ctrl+S')
+        self.file_menu.add_command(label='Save As...',
+                                   command=self.saveas_command,
+                                   accelerator='Ctrl+Shift+S')
         self.file_menu.add_separator()
-        self.file_menu.add_command(label='Exit', command=self.exit_command)
+        self.file_menu.add_command(label='Exit', command=self.exit_command,
+                                   accelerator='Ctrl+Q')
         #edit menu items
         self.edit_menu.add_command(label='Open All Mod Links', command=self.open_all_mods_command)
         self.edit_menu.add_command(label='Check For All Incompatibilities',
-                                   command=self.check_conflicts)
+                                   command=self.check_conflicts,
+                                   accelerator='Ctrl+E')
         self.edit_menu.add_command(label='Clear All Conflict Highlights',
-                                   command=self.clear_conflicts)
-        self.edit_menu.add_checkbutton(label='Collapse All Mod Categories on Open', onvalue=1, offvalue=0, variable=self.start_collapsed, selectcolor='white')
+                                   command=self.clear_conflicts,
+                                   accelerator='Ctrl+R')
+        self.edit_menu.add_checkbutton(label='Collapse All Mod Categories '
+                                       'on Open', onvalue=1, offvalue=0,
+                                       variable=self.start_collapsed,
+                                       selectcolor='white')
 
     def _configure(self, t, c, b):
         '''Configure and place the base frames'''
@@ -209,6 +220,10 @@ class Main(Frame):
         self.filter.bind('<FocusOut>', self.on_filter_focusout)
         self.filter.bind('<KeyRelease>', self.filter_command)
         #key binds
+        parent.bind_all('<Control-q>', self.exit_command)
+        parent.bind_all('<Control-e>', self.check_conflicts)
+        parent.bind_all('<Control-r>', self.clear_conflicts)
+        parent.bind_all('<Control-f>', self.focus_filter)
         self.canvas.bind_all('<Up>', self.modlistbox.moveSelectionUp)
         self.canvas.bind_all('<Down>', self.modlistbox.moveSelectionDown)
         #update mod count binds
@@ -374,7 +389,7 @@ class Main(Frame):
         self.update_unsaved_indicator()
         self.after(100, self.update_count)
 
-    def check_conflicts(self):
+    def check_conflicts(self, event=None):
         '''Checks each mod's list of incompatibilities with every other mod'''
         infos = []
         mods = []
@@ -410,7 +425,7 @@ class Main(Frame):
                             'flicts by selecting "View Conflicts" when right-.'
                             'clicking that mod.')
 
-    def clear_conflicts(self):
+    def clear_conflicts(self, event=None):
         '''Reverts all mod colors to their normal state'''
         for modlist in self.modlistbox.modlists:
             for mod in modlist.modlabel_list:
@@ -596,6 +611,8 @@ class Main(Frame):
 
     #====Misceallaneous Methods====
 
+    def focus_filter(self, event=None):
+        self.filter.focus_set()
 
     def _get_default_center(self):
         '''Gets the center of the screen at the default width and height'''

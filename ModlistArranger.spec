@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['ModlistArranger.py'],
-             pathex=['E:\\Stuff\\my progs'],
+             pathex=['E:\\Stuff\\my progs\\ModlistArranger\\ModlistArranger'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -19,19 +19,15 @@ pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
           [],
-          exclude_binaries=True,
           name='ModlistArranger',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
+          upx_exclude=[],
+          runtime_tmpdir=None,
           console=False , icon='notes.ico')
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=False,
-               upx=True,
-               upx_exclude=[],
-               name='ModlistArranger')
