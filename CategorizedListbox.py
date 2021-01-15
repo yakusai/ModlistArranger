@@ -5,6 +5,7 @@ from tkinter.simpledialog import askstring
 import webbrowser
 from ModlistListbox import ModlistListbox
 from TagLabel import TagLabel
+from IncompatibilityManager import IncompatibilityManager, ConflictListbox
 
 
 class CategorizedListbox(Frame): #AKA CLB
@@ -321,9 +322,12 @@ class CategorizedListbox(Frame): #AKA CLB
     def rightClickMenu(self, event, rc_menu):
         for modlist in self.modlists:
             modlist.selectTop()
+        #initialize colors submenu
+        colors_menu = Menu(self.master.master)
         #get clicked modlist index
         modlist_index = self.dynamic_nearest()
         mod_index = self._get_clicked_mod_index(modlist_index)
+        #General modlist commands
         rc_menu.add_command(label='Insert Nexus Mod Here...',
                             command= lambda: self.insert_mod(modlist_index, mod_index))
         rc_menu.add_command(label='Insert Non-Nexus Mod Here...',
@@ -333,6 +337,40 @@ class CategorizedListbox(Frame): #AKA CLB
                             command=lambda: self.insert_input(y))
         rc_menu.add_command(label='Insert Category At End...',
                             command=lambda: self.insert_input(END))
+        #Adds the colors submenu menu
+        if len(self.modlists[modlist_index].modlabel_list) > 0:
+            rc_menu.add_separator()
+            rc_menu.add_cascade(label='Change Mod Color To...',
+                                menu=colors_menu)
+            colors_menu.add_command(label='Default',
+                                    command=lambda: \
+                                    self.update_color(modlist_index,
+                                                      mod_index,'#383838'))
+            colors_menu.add_command(label='Red',
+                                    command=lambda: \
+                                    self.update_color(modlist_index,
+                                                      mod_index, 'red'))
+            colors_menu.add_command(label='Blue',
+                                    command=lambda: \
+                                    self.update_color(modlist_index,
+                                                      mod_index, 'blue'))
+            colors_menu.add_command(label='Green',
+                                    command=lambda: \
+                                    self.update_color(modlist_index,
+                                                      mod_index, 'green'))
+            colors_menu.add_command(label='Yellow',
+                                    command=lambda: \
+                                    self.update_color(modlist_index,
+                                                      mod_index, 'yellow'))
+            rc_menu.add_separator()
+            #incompatibilities commands
+            rc_menu.add_command(label='Manage Incompatibilities...',
+                                command=lambda: \
+                                self.manage_incomp(modlist_index, mod_index))
+            if len(self.modlists[modlist_index].modlabel_list[mod_index].conflicts) > 0:
+                rc_menu.add_command(label='View Conflicts',
+                                    command=lambda: self.view_conflicts( \
+                                        modlist_index, mod_index))
         rc_menu.add_separator()
         rc_menu.add_command(label='Rename Category',
                             command=lambda: self.rename(y))
@@ -367,6 +405,10 @@ class CategorizedListbox(Frame): #AKA CLB
         for modlist in self.modlists:
             modlist.onClickEvent(event)
 
+    def view_conflicts(self, modlist_index, mod_index):
+        conflicts = self.modlists[modlist_index].modlabel_list[mod_index].conflicts
+        ConflictListbox(self, conflicts)
+
     def copyURL(self, modlist_index, mod_index):
         self.master.master.clipboard_clear()
         self.master.master.clipboard_append(self.modlists[modlist_index].modlabel_list[mod_index].get_info()[0])
@@ -381,6 +423,14 @@ class CategorizedListbox(Frame): #AKA CLB
     def openSelected(self):
         for modlist in self.modlists:
             modlist.open_selected_links()
+
+    def update_color(self, modlist_index, mod_index, color, state='normal'):
+        self.modlists[modlist_index].modlabel_list[ \
+            mod_index].update_color(color,state)
+
+    def manage_incomp(self, modlist_index, mod_index):
+        l = self.modlists[modlist_index].modlabel_list[mod_index].incompatibilities
+        IncompatibilityManager(self, l)
 
     def _get_clicked_mod_index(self,modlist_index):
         '''return updated index if mouse is below the last mod in a given list'''

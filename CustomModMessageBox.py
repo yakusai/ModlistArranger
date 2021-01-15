@@ -6,6 +6,7 @@ import validators
 class CustomModMessageBox(Toplevel):
     def __init__(self, parent, title, info_list, font='roboto', fg='#f0f0f0', bg='#444444',*args,**kwargs):
         Toplevel.__init__(self, takefocus=True, *args,**kwargs)
+        self.grab_set()
         self.title(title)
         self.configure(bg=bg)
         #url

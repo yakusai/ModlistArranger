@@ -9,12 +9,14 @@ def invalid_url_error():
     
 class ParseURL():
     
-    def parse_nexus_url(url):
+    def parse_nexus_url(url, warning=True):
         if len(url)==0:
-            invalid_url_error()
+            if warning:
+                invalid_url_error()
             return None
         elif validators.url(url) != True:
-            invalid_url_error()
+            if warning:
+                invalid_url_error()
             return None
         parsed_url = urlparse(url)
         hostsite = parsed_url.netloc
@@ -22,16 +24,20 @@ class ParseURL():
         try:
             category = parsed_url.path.split('/')[2]
         except:
-            invalid_url_error()
+            if warning:
+                invalid_url_error()
             return None
         if protoc not in ['https','http']:
-            messagebox.showinfo('Invalid URL', '"https://" or "http://" is required at at the beginning of the URL.')
+            if warning:
+                messagebox.showinfo('Invalid URL', '"https://" or "http://" is required at at the beginning of the URL.')
             return None
         elif hostsite not in ['nexusmods.com','www.nexusmods.com']:
-            invalid_url_error()
+            if warning:
+                invalid_url_error()
             return None
         elif category != 'mods':
-            invalid_url_error()
+            if warning:
+                invalid_url_error()
             return None
         else:
             #parse inserted URL
@@ -39,7 +45,8 @@ class ParseURL():
             soup = BeautifulSoup(response.text, 'html.parser')
             title_soup = soup.find('meta', property='og:title')
             if title_soup is None or title_soup['content'] == 'Mod unavailable':
-                messagebox.showinfo('Error', 'No valid mod data found.')
+                if warning:
+                    messagebox.showinfo('Error', 'No valid mod data found.')
                 return None
             #retrieve desired information and insert into information list
             info = []

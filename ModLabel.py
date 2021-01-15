@@ -1,34 +1,6 @@
 from tkinter import *
 import webbrowser
 
-class ExpandToText(Text):
-    def __init__(self, master=None, **kwargs):
-        '''Resizes the widget to always fit its contents'''
-        Text.__init__(self, master, **kwargs)
-        self.bind('<Configure>', self.update_height)
-        self.bind('<Key>', self.update_height)
-        
-    def update_height(self, event):
-        '''Updates the height of the widget to be the number of lines of text'''
-        height=self.count('1.0', 'end', 'displaylines')[0]
-        self.configure(height=height)
-##        print(self.winfo_width())
-##        print(str(len(self.get("1.0", 'end-1c'))))
-##        print(int(round(self.winfo_width()/40)))
-        
-class TextResizer(Text):
-    def __init__(self, master=None, **kwargs):
-        '''Resizes the text in the widget to fit the widget size, up to a limit'''
-        Text.__init__(self, master, **kwargs)
-        self.bind('<Configure>', self.update_size)
-        self.bind('<Key>', self.update_size)
-
-    def update_size(self, event):
-        new_size = int(round(self.winfo_width()/4))
-        if new_size > 12:
-            new_size = 12
-        self.configure(font=('roboto',new_size))
-        
 
 class ModLabel(Frame):
     def __init__(self, parent, info, index, listview = False):
@@ -38,11 +10,16 @@ class ModLabel(Frame):
         self.listview = listview
         #set the index variable to the input index
         self.true_index = index
+        #set default color
+        self.color = '#383838'
         #set default boolean variables
         self.is_focused = False
         self.is_title_focused = False
         self.is_selected = False
         self.is_index_focused = False
+        #set incompatibility list and conflicts set
+        self.incompatibilities = []
+        self.conflicts = set()
         #configure widget to resize properly
         self.grid_columnconfigure(1, weight=1)
         #create all widgets
@@ -117,6 +94,8 @@ class ModLabel(Frame):
         self.description.configure(state='disabled')
 
     def get_info(self):
+        '''info indices: 0=url,1=title,2=game,3=desc,
+        4=version,5=site,6=color,7=incompatibilities'''
         info = []
         info.append(self.info[0])
         info.append(self.title.get())
@@ -124,12 +103,41 @@ class ModLabel(Frame):
         info.append(self.description.get('1.0', END).rstrip())
         info.append(self.info[4])
         info.append(self.version.get())
+        info.append(self.color)
+        info.append(self.incompatibilities)
         return info
         
     def update_index(self, index):
         self.index.configure(text=index+1)
         self.true_index = index
 
+    def update_color(self, bg='#383838', state='normal'):
+        '''Changes the color of the title label based on the state'''
+        if state.lower() == 'normal':
+            self.color = bg
+            self.title.config(readonlybackground=self.color)
+            self.game.config(readonlybackground=self.color)
+            self.version.config(readonlybackground=self.color)
+        elif state.lower() == 'revert':
+            self.title.config(readonlybackground=self.color)
+            self.game.config(readonlybackground=self.color)
+            self.version.config(readonlybackground=self.color)
+            self.description.config(bg='#2d2d2d', fg='#f0f0f0')
+        elif state.lower() == 'alert':
+            self.title.config(readonlybackground=bg)
+            self.game.config(readonlybackground=bg)
+            self.version.config(readonlybackground=bg)
+            self.description.config(bg=bg)
+        if self.title.cget('readonlybackground') in ['yellow', 'white', 'grey']:
+            fg = '#2d2d2d'
+        else:
+            fg = '#f0f0f0'
+        self.title.config(fg=fg)
+        self.game.config(fg=fg)
+        self.version.config(fg=fg)
+        if state.lower() == 'alert':
+            self.description.config(fg=fg)
+        
     def get_index(self):
         return self.true_index
 

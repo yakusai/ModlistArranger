@@ -106,6 +106,11 @@ class ModlistListbox(Frame):
             index = len(self.mod_list)
         mod_label = ModLabel(self.mlb_frame, info=info, index=index,
                              listview=self.listview)
+        try:
+            mod_label.update_color(info[6])
+        except IndexError:
+            pass
+        mod_label.incompatibilities = info[7]
         self.mod_list.insert(index, info)
         self.modlabel_list.insert(index,mod_label)
         if len(self.mod_list) > index:

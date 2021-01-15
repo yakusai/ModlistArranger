@@ -107,6 +107,10 @@ class Main(Frame):
         self.file_menu.add_command(label='Exit', command=self.exit_command)
         #edit menu items
         self.edit_menu.add_command(label='Open All Mod Links', command=self.open_all_mods_command)
+        self.edit_menu.add_command(label='Check For All Incompatibilities',
+                                   command=self.check_conflicts)
+        self.edit_menu.add_command(label='Clear All Conflict Highlights',
+                                   command=self.clear_conflicts)
         self.edit_menu.add_checkbutton(label='Collapse All Mod Categories on Open', onvalue=1, offvalue=0, variable=self.start_collapsed, selectcolor='white')
 
     def _configure(self, t, c, b):
@@ -208,7 +212,7 @@ class Main(Frame):
         self.canvas.bind_all('<Up>', self.modlistbox.moveSelectionUp)
         self.canvas.bind_all('<Down>', self.modlistbox.moveSelectionDown)
         #update mod count binds
-        self.canvas.bind_all('<Key>', self.update_count)
+        self.after(100, self.update_count)
 
     def load_dropped_file(self):
         if len(sys.argv) == 1:
@@ -282,15 +286,12 @@ class Main(Frame):
         self.canvas.yview_scroll(int(2*(-1*(event.delta/120))), "units")
 
     def on_click(self, event):
-        #update mod count
-        self.update_count()
         #Get widget type under mouse
         x,y = self.root.winfo_pointerxy()
         self.clicked_widget = self.root.winfo_containing(x,y)
         self.clicked_widget.focus_set()
         if self.is_entered:
             self.modlistbox.onClickEvent(event)
-        self.update_count()
 
     def on_mouse_motion(self, event):
         #Ensures you can't drag selections when clicking the wrong things
@@ -299,38 +300,37 @@ class Main(Frame):
             self.modlistbox.dragSelection(event)
 
     def on_right_click(self, event):
-        #update mod count
-        self.update_count()
         #description editing functionality
         for modlist in self.modlistbox.modlists:
             modlist._check_descs()
         #create the contextual popup menu
-        rc_menu = Menu(root, tearoff=0)
+        rc_menu = Menu(self.root, tearoff=0)
         #Get widget type under mouse
         x,y = self.root.winfo_pointerxy()
         widget = self.root.winfo_containing(x,y)
         #too lazy to rename every widget to self.clicked_widget
         self.clicked_widget = widget
         self.clicked_widget.focus_set()
-        if type(widget) in [Entry,Text] and widget.cget('state') == 'normal':
-            rc_menu.add_command(label='Paste', command=lambda:self.paste(widget))
-            rc_menu.add_command(label='Cut', command=lambda:self.cut(widget))
-            rc_menu.add_command(label='Copy', command=lambda:self.copy(widget))
-            try:
-                widget_len = len(widget.selection_get())
-            except:
-                widget_len = 0
-            if widget_len == 0:
-                rc_menu.entryconfig('Cut', state='disabled')
-                rc_menu.entryconfig('Copy', state='disabled')
-                rc_menu.config(disabledforeground='gray')
-        elif widget is self.canvas or widget in self._get_all_children(self.canvas):
-            self.modlistbox.rightClickMenu(event, rc_menu)
-            rc_menu.add_separator()
-            rc_menu.add_command(label='Collapse All Categories',
-                                command=self.modlistbox.collapse_all)
-            rc_menu.add_command(label='Expand All Categories',
-                                command=self.modlistbox.expand_all)
+        if self.clicked_widget is event.widget:
+            if type(widget) in [Entry,Text] and widget.cget('state') == 'normal':
+                rc_menu.add_command(label='Paste', command=lambda:self.paste(widget))
+                rc_menu.add_command(label='Cut', command=lambda:self.cut(widget))
+                rc_menu.add_command(label='Copy', command=lambda:self.copy(widget))
+                try:
+                    widget_len = len(widget.selection_get())
+                except:
+                    widget_len = 0
+                if widget_len == 0:
+                    rc_menu.entryconfig('Cut', state='disabled')
+                    rc_menu.entryconfig('Copy', state='disabled')
+                    rc_menu.config(disabledforeground='gray')
+            elif widget is self.canvas or widget in self._get_all_children(self.canvas):
+                    self.modlistbox.rightClickMenu(event, rc_menu)
+                    rc_menu.add_separator()
+                    rc_menu.add_command(label='Collapse All Categories',
+                                        command=self.modlistbox.collapse_all)
+                    rc_menu.add_command(label='Expand All Categories',
+                                        command=self.modlistbox.expand_all)
         try:
             rc_menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -372,7 +372,50 @@ class Main(Frame):
         '''Updates the mod count, and also the unsaved changes indicator'''
         self.mod_count_label.config(text=self.modlistbox.get_mod_count())
         self.update_unsaved_indicator()
+        self.after(100, self.update_count)
 
+    def check_conflicts(self):
+        '''Checks each mod's list of incompatibilities with every other mod'''
+        infos = []
+        mods = []
+        conflict_count = 0
+        #clear all conflicts first
+        for modlist in self.modlistbox.modlists:
+            for mod in modlist.modlabel_list:
+                mod.conflicts.clear()
+        #populate list of all mod data and list of all mods
+        for modlist in self.modlistbox.modlists:
+            for mod in modlist.modlabel_list:
+                mod.update_color(state='revert')
+                infos.append(mod.get_info())
+                mods.append(mod)
+        #for any mod's url found inside the incompatibility list of a mod
+        #currently being checked, put both mod's names into eachother's
+        #set of conflicts
+        for base_mod in mods:
+            for conflicting_mod_url in base_mod.get_info()[7]:
+                for mod in mods:
+                    mod_url = mod.get_info()[0]
+                    mod_name = mod.get_info()[1]
+                    if base_mod is not mod and conflicting_mod_url == mod_url \
+                       and base_mod.get_info()[1] not in mod.conflicts:
+                        mod.conflicts.add(base_mod.get_info()[1])
+                        base_mod.conflicts.add(mod.get_info()[1])
+                        base_mod.update_color('grey', state='alert')
+                        mod.update_color('grey', state='alert')
+                        conflict_count += 1
+        messagebox.showinfo('Conflict Scan Complete', str(conflict_count)+' con'
+                            'flict(s) found. Conflicts will be highlighted in '
+                            "grey within the list. You may view a mod's con"
+                            'flicts by selecting "View Conflicts" when right-.'
+                            'clicking that mod.')
+
+    def clear_conflicts(self):
+        '''Reverts all mod colors to their normal state'''
+        for modlist in self.modlistbox.modlists:
+            for mod in modlist.modlabel_list:
+                mod.update_color(state='revert')
+                
     #Filter Methods
     def filter_command(self, event):
         '''Updates the display to only show filtered mods'''
