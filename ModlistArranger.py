@@ -258,7 +258,7 @@ class Main(Frame):
         if info is not None:
             self.modlistbox.modlists[len(self.modlistbox.modlists)-1].insert(END, info)
             #clear text after completion
-            url_entry.delete(0, 'end')
+            self.url_entry.delete(0, 'end')
 
     #Text Commands
 
