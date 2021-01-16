@@ -311,7 +311,8 @@ class Main(Frame):
         #Get widget type under mouse
         x,y = self.root.winfo_pointerxy()
         self.clicked_widget = self.root.winfo_containing(x,y)
-        self.clicked_widget.focus_set()
+        if self.clicked_widget is not None:
+            self.clicked_widget.focus_set()
         if self.is_entered:
             self.modlistbox.onClickEvent(event)
 

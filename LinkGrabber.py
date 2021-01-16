@@ -63,7 +63,6 @@ class LinkGrabber(Toplevel):
             #Adds the information of only Nexus mods to the list
             for url in urls:
                 info = ParseURL.parse_nexus_url(url, warning=False)
-                print(info)
                 if info is not None:
                     info_list.append(info)
         else:
@@ -74,9 +73,16 @@ class LinkGrabber(Toplevel):
         self.destroy()
 
     def remove_dupes(self, a_list):
-        seen = set()
-        seen_add = seen.add
-        return [x for x in a_list if not (x in seen or seen_add(x))]
+        unique_info = []
+        if self.nexus:
+            for info in a_list:
+                if info not in unique_info:
+                    unique_info.append(info)
+            return unique_info
+        else:
+            seen = set()
+            seen_add = seen.add
+            return [x for x in a_list if not (x in seen or seen_add(x))]
 
     def strip_nexus_mod(self, url):
         '''if a url is found to be a Nexus mod url, returns its base url'''

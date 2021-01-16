@@ -41,7 +41,7 @@ class ParseURL():
             return None
         else:
             r = requests.head(url)
-            if (r.status_code == 200):
+            if (r.status_code == 200 or r.status_code == 503):
                 #parse inserted URL
                 response = requests.get(url)
                 soup = BeautifulSoup(response.text, 'html.parser')
