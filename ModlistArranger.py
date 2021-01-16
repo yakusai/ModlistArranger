@@ -11,7 +11,7 @@ from CategorizedListbox import CategorizedListbox
 from OptionDialog import OptionDialog
 
 #Determine current version number
-version = 1.2
+version = 1.21
 latest_url = 'https://github.com/yakusai/ModlistArranger/releases/latest/'
 download_url = 'https://www.nexusmods.com/skyrimspecialedition/mods/44323?tab=files'
 
