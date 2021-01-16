@@ -12,6 +12,7 @@ FEATURES
 I've displayed some of the features in the screenshots, but if you'd like more detail, most of the important features will be listed below.
 -Categorized Modlist Creation: Create modlists split into custom, renameable, and colorable categories, with no limit and for ANY game
 -Automated Nexus Link Parsing: Automatically get the name, description, and game of to add to the modlist with a single URL copy-paste. Non-Nexus mods can still be inserted manually.
+-Batch Nexus Link Insertion: Automatically grab links copied to the clipboard, and batch insert all nexus mods found into the list.
 -Incompatibility Checking System: Automatically check for conflicts for mods that you've made an incompatibility list for with the rest of the mods in your list.
 -Save and Load: Save and load modlists freely as .malist files
 -Editable Mod Descriptions: Edit any mod's description at any time, to make personal notes or otherwise.
@@ -72,8 +73,8 @@ IN-DEPTH HOW-TO
 KNOWN ISSUES
 
 
--Will update this section as bugs are discovered.
--NOTE: When inserting a Nexus URL, the mod might take a second to appear on the modlist because the Nexus' server is slow. Nothing I can really do about that, sorry, but you can just let it run for the second it takes to load and look for other mods in the meantime. This also means that using the batch nexus mod insertion system may take a long time depending on how many links were inserted.
+-Slow Nexus Mod Insertion: When inserting a Nexus URL, the mod might take a second to appear on the modlist because the Nexus' server is slow, or even longer if their server is overloaded. Nothing I can really do about that, but you can just let it run for the second it takes to load and look for other mods in the meantime.
+-The program says the Nexus server is unreachable, but you can still use the website: That is because the website can still function properly, but the Nexus server is still unavailable to gather data from. This is a problem on the Nexus' end, and shouild fix itself on its own eventually.
 -Automatically obtained descriptions will be cut-off if they are too long. This is because long descriptions are cut-off in the Nexus HTML files themselves, so I can't do much about it on my end.
 -If ANYTHING goes wrong within the program (unlikely, but possible), the save-on-quit command won't work any more for that session. Normal saving should still function normally, but you won't get an error message if anything screws up, so just remember to save often.
 -WARNING: A select few antivirus programs (including Microsoft's) seem to think of the exe for my application as a virus. This is a seemingly common issue for Python scripts compiled like mine is (through pyinstaller). I've rebuilt the application now, and have reduced the number of false positives significantly, but some antiviruses still flag it, as can be seen on VirusTotal﻿. I can pretty safely say to ignore these detections, but if you're still worried, that's fair. For even further clarity though, I have posted the github repository for my program here﻿, where you can see all the source files and code.
