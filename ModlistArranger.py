@@ -4,9 +4,16 @@ from tkinter import messagebox
 import sys
 import os
 import ast
+import webbrowser
+import requests
 from ParseURL import ParseURL
 from CategorizedListbox import CategorizedListbox
 from OptionDialog import OptionDialog
+
+#Determine current version number
+version = 1.2
+latest_url = 'https://github.com/yakusai/ModlistArranger/releases/latest/'
+download_url = 'https://www.nexusmods.com/skyrimspecialedition/mods/44323?tab=files'
 
 class Main(Frame):
     def __init__(self, parent):
@@ -649,8 +656,27 @@ class Main(Frame):
                 return
         self.edit_menu.entryconfig('Open All Mod Links', state='disabled')
 
+def check_for_updates(notifyHasLatest=False):
+    '''Checks for an updated version online'''
+    global latest_url
+    global version
+    latest = ParseURL.get_web_version(latest_url)
+    if float(latest) > version:
+        msgBox = messagebox.askquestion('New Version Found', 'New version found. Go to download page?')
+        if msgBox == 'yes':
+            r = requests.head(download_url)
+            #Check for valid status codes. 200 for valid, 302 for redirect, 503 for service unavailable
+            if r.status_code in [200, 302]:
+                webbrowser.open_new(download_url)
+            else:
+                messagebox.showinfo('Nexus Page Unreachable', 'Nexus page unreachable. Opening Github download page instead.')
+                webbrowser.open_new(latest_url)
+    elif notifyHasLatest:
+        messagebox.showinfo('Up to Date', 'You have the latest version of the program.')
+
 
 if __name__ == '__main__':
     root = Tk()
     Main(root)
+    check_for_updates()
     root.mainloop()

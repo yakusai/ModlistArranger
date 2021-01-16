@@ -6,6 +6,7 @@ import webbrowser
 from ModlistListbox import ModlistListbox
 from TagLabel import TagLabel
 from IncompatibilityManager import IncompatibilityManager, ConflictListbox
+from LinkGrabber import LinkGrabber
 
 
 class CategorizedListbox(Frame): #AKA CLB
@@ -317,7 +318,19 @@ class CategorizedListbox(Frame): #AKA CLB
         self.modlists[modlist_index].insertInput(mod_index)
 
     def insert_custom_mod(self, modlist_index, mod_index):
-        self.modlists[modlist_index].insertCustomInput(mod_index)        
+        self.modlists[modlist_index].insertCustomInput(mod_index)
+
+    def batch_insert_mod(self, modlist_index, mod_index):
+        l = []
+        LinkGrabber(self, l, nexus=True)
+        if len(l) == 0:
+            messagebox.showinfo('No Valid Data Found', 'Either none of the '
+                                'links provided were valid Nexus mod links, '
+                                'or the Nexus web server is currently unava'
+                                'ilable.')
+        else:
+            for info in reversed(l):
+                self.modlists[modlist_index].insert(mod_index, info)
 
     def rightClickMenu(self, event, rc_menu):
         for modlist in self.modlists:
@@ -330,6 +343,9 @@ class CategorizedListbox(Frame): #AKA CLB
         #General modlist commands
         rc_menu.add_command(label='Insert Nexus Mod Here...',
                             command= lambda: self.insert_mod(modlist_index, mod_index))
+        rc_menu.add_command(label='Insert Multiple Nexus Mods Here...',
+                            command= lambda: self.batch_insert_mod(modlist_index,
+                                                                   mod_index))
         rc_menu.add_command(label='Insert Non-Nexus Mod Here...',
                             command= lambda: self.insert_custom_mod(modlist_index, mod_index))
         y = self._get_clicked_cat_index(modlist_index)

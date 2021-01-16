@@ -17,7 +17,8 @@ class LinkGrabber(Toplevel):
         tiptext = 'Links will automatically be grabbed whenever you copy a ' \
                   'URL to your clipboard while this window is open. '
         if nexus:
-            tiptext += 'ONLY Nexus links will be accepted and used as input.'
+            tiptext += 'ANY link will be caught, but ONLY valid Nexus mod links '\
+                       'will be inserted. '
         else:
             tiptext += 'ANY link will be accepted and used as input. '
         tiptext += 'Duplicate links will be removed.'
@@ -62,6 +63,7 @@ class LinkGrabber(Toplevel):
             #Adds the information of only Nexus mods to the list
             for url in urls:
                 info = ParseURL.parse_nexus_url(url, warning=False)
+                print(info)
                 if info is not None:
                     info_list.append(info)
         else:
