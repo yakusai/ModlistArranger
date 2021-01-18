@@ -70,6 +70,8 @@ class LinkGrabber(Toplevel):
             info_list += urls
         #Remove duplicates from the list
         info_list[:] = self.remove_dupes(info_list)
+        if len(info_list) == 0:
+            info_list.append(False)
         self.destroy()
 
     def remove_dupes(self, a_list):

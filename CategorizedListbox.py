@@ -110,6 +110,7 @@ class CategorizedListbox(Frame): #AKA CLB
                 self.delete(index+1)
             
     def delete_confirm(self,index):
+        '''Add a confirmation to delete commands'''
         msgBox = messagebox.askquestion ('Removing Category',
                                          'Remove the "'+self.modlists[index].name+'" Category and its contents?',
                                          icon = 'warning')
@@ -117,7 +118,7 @@ class CategorizedListbox(Frame): #AKA CLB
             self.delete(index)
 
     def delete(self,index,force_delete=False):
-        '''delete a modlist at the given index'''
+        '''Delete a modlist at the given index'''
         if not force_delete and len(self.modlists) == 1:
             messagebox.showinfo('Prohibited Action',
                                 'You must always have at least one category in the list.')
@@ -132,6 +133,41 @@ class CategorizedListbox(Frame): #AKA CLB
             self.modlists[index].grid_forget()
             self.modlists[index].destroy()
             del self.modlists[index]
+
+    def delete_mod(self, modlist_index, mod_index):
+        '''Delete a mod at the given indices'''
+        mod = self.modlists[modlist_index].modlabel_list[mod_index]
+        msgBox = messagebox.askquestion ('Removing Mod',
+                                         'Remove "{}"?'.format(mod.get_info()[1]),
+                                         icon = 'warning')
+        if msgBox == 'yes':
+            self.modlists[modlist_index].delete(mod_index)
+
+    def delete_selected_mod(self):
+        msgBox = messagebox.askquestion ('Removing Selected',
+                                         'Remove selected mods from the list?',
+                                         icon = 'warning')
+        if msgBox == 'yes':
+            for modlist in self.modlists:
+                modlist.delete_selected()
+
+    def delete_all_mods(self):
+        msgBox = messagebox.askquestion ('Removing All',
+                                         'Remove all mods from the list?',
+                                         icon = 'warning')
+        if msgBox == 'yes':
+            for modlist in self.modlists:
+                modlist.delete_all()
+
+    def delete_all_cat(self, modlist_index):
+        '''Delete all mods in a category at the given index'''
+        modlist=self.modlists[modlist_index]
+        msgBox = messagebox.askquestion ('Removing All',
+                                         'Remove all mods from the "'+
+                                         modlist.name+'" Category?',
+                                         icon = 'warning')
+        if msgBox == 'yes':
+            modlist.delete_all()
         
     def collapse_all(self):
         '''Collapses all mod listboxes'''
@@ -298,22 +334,6 @@ class CategorizedListbox(Frame): #AKA CLB
             modlist.selectAll()
         self.selected_modlists.clear()
 
-    def deleteSelected(self):
-        msgBox = messagebox.askquestion ('Removing Selected',
-                                         'Remove selected mods from the list?',
-                                         icon = 'warning')
-        if msgBox == 'yes':
-            for modlist in self.modlists:
-                modlist.delete_selected()
-
-    def deleteAll(self):
-        msgBox = messagebox.askquestion ('Removing All',
-                                         'Remove all mods from the list?',
-                                         icon = 'warning')
-        if msgBox == 'yes':
-            for modlist in self.modlists:
-                modlist.delete_all()
-
     def insert_mod(self, modlist_index, mod_index):
         self.modlists[modlist_index].insertInput(mod_index)
 
@@ -323,7 +343,7 @@ class CategorizedListbox(Frame): #AKA CLB
     def batch_insert_mod(self, modlist_index, mod_index):
         l = []
         LinkGrabber(self, l, nexus=True)
-        if len(l) == 0:
+        if len(l) == 1 and l[0] == False:
             messagebox.showinfo('No Valid Data Found', 'Either none of the '
                                 'links provided were valid Nexus mod links, '
                                 'or the Nexus web server is currently unava'
@@ -332,14 +352,28 @@ class CategorizedListbox(Frame): #AKA CLB
             for info in reversed(l):
                 self.modlists[modlist_index].insert(mod_index, info)
 
+    def move_mod_to(self, modlist_index, target_modlist):
+        modlist = self.modlists[modlist_index]
+        for mod in sorted(modlist.selected_modlabel_list,
+                          key=lambda x: x.get_index()):
+            target_modlist.insert(END, mod.get_info())
+        modlist.delete_selected()
+
     def rightClickMenu(self, event, rc_menu):
-        for modlist in self.modlists:
-            modlist.selectTop()
-        #initialize colors submenu
-        colors_menu = Menu(self.master.master)
-        #get clicked modlist index
+        #Select proper categories
+        for i in self.modlists:
+            i.selectTop()
+        #Initialize submenus
+        colors_menu = Menu(self.master.master, tearoff=0)
+        remove_menu = Menu(self.master.master, tearoff=0)
+        merge_menu = Menu(self.master.master, tearoff=0)
+        select_menu = Menu(self.master.master, tearoff=0)
+        links_menu = Menu(self.master.master, tearoff=0)
+        move_menu = Menu(self.master.master, tearoff=0)
+        #Get clicked indices and modlist
         modlist_index = self.dynamic_nearest()
         mod_index = self._get_clicked_mod_index(modlist_index)
+        modlist = self.modlists[modlist_index]
         #General modlist commands
         rc_menu.add_command(label='Insert Nexus Mod Here...',
                             command= lambda: self.insert_mod(modlist_index, mod_index))
@@ -353,11 +387,21 @@ class CategorizedListbox(Frame): #AKA CLB
                             command=lambda: self.insert_input(y))
         rc_menu.add_command(label='Insert Category At End...',
                             command=lambda: self.insert_input(END))
-        #Adds the colors submenu menu
-        if len(self.modlists[modlist_index].modlabel_list) > 0:
+        #Move options
+        rc_menu.add_separator()
+        rc_menu.add_cascade(label='Move Selected Mods To...', menu=move_menu)
+        if len(modlist.modlabel_list) > 0 and \
+        len(modlist.selected_modlabel_list) > 0:
+            for ml in self.modlists:
+                move_menu.add_command(label=ml.name,
+                                      command=lambda ml=ml: self.move_mod_to( \
+                                          modlist_index,ml))
+                if ml == modlist:
+                    move_menu.entryconfig(ml.name, state='disabled')
+        #Color options
+        if len(modlist.modlabel_list) > 0:
             rc_menu.add_separator()
-            rc_menu.add_cascade(label='Change Mod Color To...',
-                                menu=colors_menu)
+            rc_menu.add_cascade(label='Change Mod Color To...', menu=colors_menu)
             colors_menu.add_command(label='Default',
                                     command=lambda: \
                                     self.update_color(modlist_index,
@@ -390,36 +434,68 @@ class CategorizedListbox(Frame): #AKA CLB
         rc_menu.add_separator()
         rc_menu.add_command(label='Rename Category',
                             command=lambda: self.rename(y))
+        #Link options
         rc_menu.add_separator()
         rc_menu.add_command(label='Copy Mod Link', command=lambda:self.copyURL(modlist_index, mod_index))
-        for modlist in self.modlists:
-            if len(modlist.selected_modlabel_list) > 0:
-                rc_menu.add_command(label='Open Selected Mod Links', command=self.openSelected)
-                break
-        rc_menu.add_command(label='Open All Mod Links in "{}"'.format(self.modlists[modlist_index].name),
-                            command=lambda x=modlist_index:self.openAll(x))
+        
+        rc_menu.add_cascade(label='Open Links...', menu=links_menu)
+        links_menu.add_command(label='Open Selected Mod Links',
+                               command=self.open_selected)
+        links_menu.add_command(label='Open All Mod Links in Category Here',
+                               command=lambda x=modlist_index:self.openAll(x))
+        #Selection options
         rc_menu.add_separator()
-        rc_menu.add_command(label='Select All Mods', command=self.selectAll)
+        rc_menu.add_cascade(label='Select...', menu=select_menu)
+        select_menu.add_command(label='Select Here',
+                            command=lambda : modlist.rightClickSelect(mod_index))
+        select_menu.add_command(label='Select All Mods in Category Here',
+                            command=modlist.selectAll)
+        select_menu.add_command(label='Select All Mods',
+                                command=self.selectAll)
+        #Merge options
         rc_menu.add_separator()
-        for i in range(len(self.modlists)):
-            if self.modlists[i].is_entered_all:
-                n = 0
-                if i > 0:
-                    rc_menu.add_command(label='Merge "'+self.modlists[i].name+'" Category Into Upper',
-                                        command=lambda i=i:self.merge_up(i))
-                    n += 1
-                if i < len(self.modlists)-1:
-                    rc_menu.add_command(label='Merge "'+self.modlists[i].name+'" Category Into Lower',
-                                        command=lambda i=i:self.merge_down(i))
-                    n+=1
-                if n > 0:
-                    rc_menu.add_separator()
-                self.modlists[i].rightClickMenu(event, rc_menu)
-        rc_menu.add_command(label='Remove All Mods', command=self.deleteAll)
-        rc_menu.add_command(label='Remove "'+self.modlists[modlist_index].name+'" Category', command=lambda i=i: self.delete_confirm(i))
-        #Selects and deselects appropriate mods
+        rc_menu.add_cascade(label='Merge Category...', menu=merge_menu)
+        merge_menu.add_command(label='Merge Category Here Into Upper',
+                            command=lambda i=i:self.merge_up(modlist_index))
+        merge_menu.add_command(label='Merge Category Here Into Lower',
+                            command=lambda i=i:self.merge_down(modlist_index))
+        if modlist_index == 0:
+            merge_menu.entryconfig('Merge Category Here Into Upper',
+                                   state='disabled')
+        if modlist_index == len(self.modlists)-1:
+            merge_menu.entryconfig('Merge Category Here Into Lower',
+                                   state='disabled')
+        #Removal options
+        rc_menu.add_separator()
+        rc_menu.add_cascade(label='Remove...', menu=remove_menu)
+        remove_menu.add_command(label='Remove Mod Here',
+                            command=lambda: self.delete_mod(modlist_index, mod_index))
+        remove_menu.add_command(label='Remove Selected Mods',
+                            command=self.delete_selected_mod)
+        remove_menu.add_command(label='Remove All In Category',
+                            command=lambda: self.delete_all_cat(modlist_index))
+        remove_menu.add_command(label='Remove Category Here',
+                            command=lambda : self.delete_confirm(modlist_index))
+        remove_menu.add_command(label='Remove All Mods',
+                            command=self.delete_all_mods)
+        if len(modlist.modlabel_list) == 0:
+            remove_menu.entryconfig('Remove Mod Here', state='disabled')
+            remove_menu.entryconfig('Remove All In Category', state='disabled')
+            select_menu.entryconfig('Select Here', state='disabled')
+            select_menu.entryconfig('Select All Mods in Category Here',
+                                    state='disabled')
+            links_menu.entryconfig('Open All Mod Links in Category Here',
+                                    state='disabled')
+        #Selects and deselects appropriate mods and categories
+        i = 0
         for modlist in self.modlists:
+            i += len(modlist.selected_modlabel_list)
+            if i == 0:
+                links_menu.entryconfig('Open Selected Mod Links',
+                                       state='disabled')
             modlist.onClickEvent(event)
+            modlist.rightClickMenu(event, rc_menu)
+
 
     def view_conflicts(self, modlist_index, mod_index):
         conflicts = self.modlists[modlist_index].modlabel_list[mod_index].conflicts
@@ -436,7 +512,7 @@ class CategorizedListbox(Frame): #AKA CLB
         if msgBox == 'yes':
             self.modlists[modlist_index].open_all_links()
 
-    def openSelected(self):
+    def open_selected(self):
         for modlist in self.modlists:
             modlist.open_selected_links()
 

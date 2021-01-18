@@ -11,7 +11,7 @@ from CategorizedListbox import CategorizedListbox
 from OptionDialog import OptionDialog
 
 #Determine current version number
-version = 1.21
+version = 1.3
 latest_url = 'https://github.com/yakusai/ModlistArranger/releases/latest/'
 download_url = 'https://www.nexusmods.com/skyrimspecialedition/mods/44323?tab=files'
 
@@ -30,6 +30,8 @@ class Main(Frame):
         self.can_open_all = False
         self.clicked_widget = None
         self.is_listview = False
+        self.notebox = None
+        self.notes = ''
         self._settings()
         self._root(parent)
         self.root = parent
@@ -119,7 +121,10 @@ class Main(Frame):
         self.file_menu.add_command(label='Exit', command=self.exit_command,
                                    accelerator='Ctrl+Q')
         #edit menu items
-        self.edit_menu.add_command(label='Open All Mod Links', command=self.open_all_mods_command)
+        self.edit_menu.add_command(label='Open Modlist Notes',
+                                   command=self.open_modlist_notes)
+        self.edit_menu.add_command(label='Open All Mod Links',
+                                   command=self.open_all_mods_command)
         self.edit_menu.add_command(label='Check For All Incompatibilities',
                                    command=self.check_conflicts,
                                    accelerator='Ctrl+E')
@@ -305,7 +310,10 @@ class Main(Frame):
     #Mouse Methods
     def on_mousewheel(self, event):
         '''scrolls the vertical view by a number of units'''
-        self.canvas.yview_scroll(int(2*(-1*(event.delta/120))), "units")
+        x,y = self.root.winfo_pointerxy()
+        widget = self.root.winfo_containing(x,y)
+        if widget is self.canvas or widget in self._get_all_children(self.canvas):
+            self.canvas.yview_scroll(int(2*(-1*(event.delta/120))), "units")
 
     def on_click(self, event):
         #Get widget type under mouse
@@ -502,6 +510,8 @@ class Main(Frame):
         
 
     def open_command(self,event=None):
+        if self.notebox is not None:
+            self._close_notes(self.notebox.master)
         will_continue = self._save_changes()
         if will_continue == False:
             return
@@ -518,9 +528,15 @@ class Main(Frame):
             d = []
             with open(file, 'r') as f:
                 data = f.read().splitlines()
+            get_notes = False
+            self.notes = ''
             for i in range(0,len(data),2):
-                if data[i] != '':
+                if data[i] not in ['','>?<'] and get_notes == False:
                     d.append([data[i],ast.literal_eval(data[i+1])])
+                elif data[i] == '>?<':
+                    for n in range(i+1,len(data)):
+                        self.notes += data[n]+'\n'
+                    break
             self.canvas.pack_forget()
             self.modlistbox.load(d)
             if self.start_collapsed.get():
@@ -537,6 +553,8 @@ class Main(Frame):
             else:
                 return False
         else:
+            if self.notebox is not None:
+                self.notes = self.notebox.get('1.0', END).rstrip()+'\n'
             file = '{}\{}'.format(self.path, self.basename)
             self._save(file)
             return True
@@ -552,6 +570,8 @@ class Main(Frame):
             self.original_data = self._get_data()
                         
     def saveas_command(self,event=None):
+        if self.notebox is not None:
+            self._close_notes(self.notebox.master)
         file = filedialog.asksaveasfilename(initialdir = self.path,title ='Save As', filetypes = (('Modlist Arranger List Files','*.malist'),('all files','*.*')), defaultextension='.malist')
         if file:
             self._save(file)
@@ -563,6 +583,7 @@ class Main(Frame):
         for modlist in self.modlistbox.modlists:
             d += modlist.name+'\n'
             d += str(modlist.get_all_info())+'\n'
+        d += '>?<\n'+self.notes
         return d
     
     def _save_changes(self):
@@ -616,6 +637,26 @@ class Main(Frame):
         if data != self.original_data:
             self.root.title(self.name+'*'+self.basename+'*')
 
+    def open_modlist_notes(self, event=None):
+        '''Creates a textbox to edit modlist notes in'''
+        frame = Toplevel(self)
+        frame.geometry('500x300')
+        frame.protocol('WM_DELETE_WINDOW', lambda \
+                       a=frame: self._close_notes(a))
+        textbox = Text(frame)
+        textbox.insert('1.0', self.notes)
+        textbox.pack(fill='both',expand=True)
+        self.notebox = textbox
+##        textbox.bind('<KeyRelease>', lambda event, a=textbox: self._save_text(a))
+
+##    def _save_text(self, textbox):
+##        '''Sets the notes variable to the contents of the notes textbox'''
+##        self.notes = textbox.get('1.0', END)
+
+    def _close_notes(self, frame):
+        self.notes = self.notebox.get('1.0', END).rstrip()+'\n'
+        self.notebox = None
+        frame.destroy()
 
     #====Misceallaneous Methods====
 
@@ -661,7 +702,10 @@ def check_for_updates(notifyHasLatest=False):
     '''Checks for an updated version online'''
     global latest_url
     global version
-    latest = ParseURL.get_web_version(latest_url)
+    try:
+        latest = ParseURL.get_web_version(latest_url)
+    except:
+        return
     if float(latest) > version:
         msgBox = messagebox.askquestion('New Version Found', 'New version found. Go to download page?')
         if msgBox == 'yes':

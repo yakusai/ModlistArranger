@@ -106,6 +106,7 @@ class ModlistListbox(Frame):
             index = len(self.mod_list)
         mod_label = ModLabel(self.mlb_frame, info=info, index=index,
                              listview=self.listview)
+        #Try to update the new indices. Fails if from an older mod
         try:
             mod_label.update_color(info[6])
             mod_label.incompatibilities = info[7]
@@ -123,6 +124,7 @@ class ModlistListbox(Frame):
             self.force_expand()
 
     def delete(self, index):
+        '''Delete a mod at the given index'''
         if index == END:
             index = len(self.mod_list)-1
         if index<len(self.mod_list)-1:
@@ -139,6 +141,9 @@ class ModlistListbox(Frame):
             self.mlb_frame.configure(height=1)
         if self.is_collapsed:
             self.force_expand()
+            #Quick fix for a category not properly expanding if last mod deleted
+            self.is_collapsed = False
+            self.name_label.configure(bg='#666666')
 
     def delete_selected(self):
         for x in range(len(self.selected_modlabel_list)):
@@ -152,8 +157,12 @@ class ModlistListbox(Frame):
             self.delete_all()
 
     def delete_all(self):
+        '''deletes all mods from the list'''
         for x in range(len(self.modlabel_list)):
             self.delete(0)
+        #Quick fix for a category not properly expanding if last mod deleted
+        self.is_collapsed = False
+        self.name_label.configure(bg='#666666')
 
     def open_link(self, modlabel):
         webbrowser.open_new(modlabel.get_info()[0])
@@ -220,19 +229,20 @@ class ModlistListbox(Frame):
                 #If the mod clicked is not selected, select it
                 if mod not in self.selected_modlabel_list:
                     self.onClickEvent(event)
-                rc_menu.add_command(label='Select',
-                                    command=lambda mod=mod: self.rightClickSelect(mod))
-                rc_menu.add_command(label='Select All Mods in "'+self.name+'" Category',
-                                    command=self.selectAll)
-                rc_menu.add_separator()
-                rc_menu.add_command(label='Remove',
-                                    command=lambda mod=mod: self.delete(mod.get_index()))
-                if len(self.selected_modlabel_list) > 0:
-                    rc_menu.add_command(label='Remove Selected',
-                                        command=self.delete_selected)
-                if len(self.modlabel_list) > 0:
-                    rc_menu.add_command(label='Remove All Mods In "'+self.name+'" Category',
-                                        command=self.delete_all_confirm)
+##                rc_menu.add_command(label='Select',
+##                                    command=lambda mod=mod: self.rightClickSelect(mod))
+##                rc_menu.add_command(label='Select All Mods in "'+self.name+'" Category',
+##                                    command=self.selectAll)
+##                rc_menu.add_separator()
+##                rc_menu.add_separator()
+##                rc_menu.add_command(label='Remove',
+##                                    command=lambda mod=mod: self.delete(mod.get_index()))
+##                if len(self.selected_modlabel_list) > 0:
+##                    rc_menu.add_command(label='Remove Selected',
+##                                        command=self.delete_selected)
+##                if len(self.modlabel_list) > 0:
+##                    rc_menu.add_command(label='Remove All Mods In "'+self.name+'" Category',
+##                                        command=self.delete_all_confirm)
 
     def insertInput(self, index):
         url = askstring('New Mod at Index '+str(index+1),'Input Nexus URL')
@@ -308,7 +318,8 @@ class ModlistListbox(Frame):
                             self.selected_modlabel_list.append(self.modlabel_list[y])
                             self.modlabel_list[y].force_select()
 
-    def rightClickSelect(self, mod):
+    def rightClickSelect(self, mod_index):
+        mod = self.modlabel_list[mod_index]
         self.deselectAll()
         mod.force_select()
         self.selected_modlabel_list.append(mod)
