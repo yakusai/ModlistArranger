@@ -25,6 +25,11 @@ class Main(Frame):
         self.basename = 'Untitled'
         self.filter_text = ''
         self.start_collapsed = BooleanVar(value=True)
+        self.def_flagged = BooleanVar(value=False)
+        self.red_flagged = BooleanVar(value=False)
+        self.blu_flagged = BooleanVar(value=False)
+        self.gre_flagged = BooleanVar(value=False)
+        self.yel_flagged = BooleanVar(value=False)
         self.is_entered = False
         self.is_text_entered = False
         self.can_open_all = False
@@ -103,6 +108,7 @@ class Main(Frame):
         self.root.config(menu=root_menu)
         self.file_menu = Menu(root_menu, tearoff=0)
         self.edit_menu = Menu(root_menu, tearoff=0, postcommand=self._has_mods_command)
+        self.color_flag_menu = Menu(root_menu, tearoff=0)
         #create menu items
         root_menu.add_cascade(label='File', menu=self.file_menu)
         root_menu.add_cascade(label='Edit', menu=self.edit_menu)
@@ -125,16 +131,41 @@ class Main(Frame):
                                    command=self.open_modlist_notes)
         self.edit_menu.add_command(label='Open All Mod Links',
                                    command=self.open_all_mods_command)
+        self.edit_menu.add_cascade(label='Flag Color as Non-Mod...',
+                                    menu=self.color_flag_menu)
+        self.edit_menu.add_separator()
         self.edit_menu.add_command(label='Check For All Incompatibilities',
                                    command=self.check_conflicts,
                                    accelerator='Ctrl+E')
         self.edit_menu.add_command(label='Clear All Conflict Highlights',
                                    command=self.clear_conflicts,
                                    accelerator='Ctrl+R')
+        self.edit_menu.add_separator()
         self.edit_menu.add_checkbutton(label='Collapse All Mod Categories '
                                        'on Open', onvalue=1, offvalue=0,
                                        variable=self.start_collapsed,
                                        selectcolor='white')
+        #flag color submenu items
+        self.color_flag_menu.add_checkbutton(label='Default', onvalue=1,
+                                             offvalue=0,
+                                             variable=self.def_flagged,
+                                             selectcolor='white')
+        self.color_flag_menu.add_checkbutton(label='Red', onvalue=1,
+                                             offvalue=0,
+                                             variable=self.red_flagged,
+                                             selectcolor='white')
+        self.color_flag_menu.add_checkbutton(label='Blue', onvalue=1,
+                                             offvalue=0,
+                                             variable=self.blu_flagged,
+                                             selectcolor='white')
+        self.color_flag_menu.add_checkbutton(label='Green', onvalue=1,
+                                             offvalue=0,
+                                             variable=self.gre_flagged,
+                                             selectcolor='white')
+        self.color_flag_menu.add_checkbutton(label='Yellow', onvalue=1,
+                                             offvalue=0,
+                                             variable=self.yel_flagged,
+                                             selectcolor='white')
 
     def _configure(self, t, c, b):
         '''Configure and place the base frames'''
@@ -401,7 +432,19 @@ class Main(Frame):
 
     def update_count(self, event=None):
         '''Updates the mod count, and also the unsaved changes indicator'''
-        self.mod_count_label.config(text=self.modlistbox.get_mod_count())
+        #Gets the colors flagged as non-mods
+        colors = []
+        if self.def_flagged.get():
+            colors.append('#383838')
+        if self.red_flagged.get():
+            colors.append('red')
+        if self.blu_flagged.get():
+            colors.append('blue')
+        if self.gre_flagged.get():
+            colors.append('green')
+        if self.yel_flagged.get():
+            colors.append('yellow')
+        self.mod_count_label.config(text=self.modlistbox.get_mod_count(colors))
         self.update_unsaved_indicator()
         self.after(100, self.update_count)
 

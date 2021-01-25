@@ -40,10 +40,13 @@ class CategorizedListbox(Frame): #AKA CLB
         for named_modlist in named_modlists:
             self.insert(END, named_modlist[0], named_modlist[1])
 
-    def get_mod_count(self):
+    def get_mod_count(self, colors):
         n = 0
         for modlist in self.modlists:
-            n += len(modlist.modlabel_list)
+            for mod in modlist.modlabel_list:
+                if mod.color not in colors:
+                    n += 1
+##            n += len(modlist.modlabel_list)
         return 'Total Modcount: '+str(n)
 
     def insert(self, index, name, modlist_info=None, is_collapsed=False):
@@ -108,6 +111,22 @@ class CategorizedListbox(Frame): #AKA CLB
             #delete both previous modlists
             for x in range(2):
                 self.delete(index+1)
+
+    def delete_selected(self):
+        '''delete all selected modlists'''
+        if len(self.selected_modlists) == len(self.modlists):
+            messagebox.showinfo('Selection Size Too Large',
+                                'You cannot delete all the categories in the '
+                                'list. There must always be at least one.',
+                                icon = 'warning')
+        else:
+            msgBox = messagebox.askquestion ('Removing Selected Categories',
+                                             'Remove all selected categories '
+                                             'and their contents?',
+                                             icon = 'warning')
+            if msgBox == 'yes':
+                for x in range(len(self.selected_modlists)):
+                    self.delete(self.modlists.index(self.selected_modlists[0]))
             
     def delete_confirm(self,index):
         '''Add a confirmation to delete commands'''
@@ -209,8 +228,25 @@ class CategorizedListbox(Frame): #AKA CLB
 
 
     def onShiftClickEvent(self, event):
-        for modlist in self.modlists:
-            modlist.onShiftClickEvent(event)
+        if len(self.selected_modlists) > 0:
+            #set original index to start multi-selection from
+            origin=self.modlists.index(self.selected_modlists[-1])
+            for x in range(len(self.modlists)):
+                #checks every modlist for a valid multi-selection activation
+                if self.modlists[x].is_top_entered:
+                    #checks whether the index of the target modlists is above
+                    #or below origin, then multi-selects accordingly
+                    if (x - origin) > 0:
+                        for y in range(origin,x+1):
+                            self.selected_modlists.append(self.modlists[y])
+                            self.modlists[y].forceSelectTop()
+                    elif (x - origin) < 0:
+                        for y in range(x, origin):
+                            self.selected_modlists.append(self.modlists[y])
+                            self.modlists[y].forceSelectTop()
+        else:
+            for modlist in self.modlists:
+                modlist.onShiftClickEvent(event)
 
     def dragSelection(self, event):
         '''Moves selected mods depending on mouse movement, and moves mods
@@ -317,14 +353,22 @@ class CategorizedListbox(Frame): #AKA CLB
                         return
 
     def onClickEvent(self, event):
+        '''When the player clicks, control whether categories should be selected'''
+        deselect_others = True
+        #if clicked mod is already part of selection, prevents the deselection of other mods
         for x in range(len(self.modlists)):
-            modlist = self.modlists[x]
-            modlist.selectTop()
-            if modlist.is_top_selected and modlist not in self.selected_modlists:
-                self.current_index = x
-                self.selected_modlists.append(modlist)
-            elif not modlist.is_top_selected and modlist in self.selected_modlists:
-                self.selected_modlists.remove(modlist)
+            if self.modlists[x].is_top_entered and self.modlists[x].is_top_selected:
+                deselect_others = False
+        if deselect_others:
+            for x in range(len(self.modlists)):
+                #Controls the selection of category names
+                modlist = self.modlists[x]
+                modlist.selectTop()
+                if modlist.is_top_selected and modlist not in self.selected_modlists:
+                    self.current_index = x
+                    self.selected_modlists.append(modlist)
+                elif not modlist.is_top_selected and modlist in self.selected_modlists:
+                    self.selected_modlists.remove(modlist)
         for modlist in self.modlists:
             modlist.onClickEvent(event)
 
@@ -360,9 +404,10 @@ class CategorizedListbox(Frame): #AKA CLB
         modlist.delete_selected()
 
     def rightClickMenu(self, event, rc_menu):
-        #Select proper categories
-        for i in self.modlists:
-            i.selectTop()
+##        #Select proper categories
+##        for i in self.modlists:
+##            i.selectTop()
+        self.onClickEvent(event)
         #Initialize submenus
         colors_menu = Menu(self.master.master, tearoff=0)
         remove_menu = Menu(self.master.master, tearoff=0)
@@ -401,27 +446,23 @@ class CategorizedListbox(Frame): #AKA CLB
         #Color options
         if len(modlist.modlabel_list) > 0:
             rc_menu.add_separator()
-            rc_menu.add_cascade(label='Change Mod Color To...', menu=colors_menu)
+            rc_menu.add_cascade(label="Change Selected Mods' Color To...",
+                                menu=colors_menu)
             colors_menu.add_command(label='Default',
                                     command=lambda: \
-                                    self.update_color(modlist_index,
-                                                      mod_index,'#383838'))
+                                    self.update_selected_colors('#383838'))
             colors_menu.add_command(label='Red',
                                     command=lambda: \
-                                    self.update_color(modlist_index,
-                                                      mod_index, 'red'))
+                                    self.update_selected_colors('red'))
             colors_menu.add_command(label='Blue',
                                     command=lambda: \
-                                    self.update_color(modlist_index,
-                                                      mod_index, 'blue'))
+                                    self.update_selected_colors('blue'))
             colors_menu.add_command(label='Green',
                                     command=lambda: \
-                                    self.update_color(modlist_index,
-                                                      mod_index, 'green'))
+                                    self.update_selected_colors('green'))
             colors_menu.add_command(label='Yellow',
                                     command=lambda: \
-                                    self.update_color(modlist_index,
-                                                      mod_index, 'yellow'))
+                                    self.update_selected_colors('yellow'))
             rc_menu.add_separator()
             #incompatibilities commands
             rc_menu.add_command(label='Manage Incompatibilities...',
@@ -456,9 +497,9 @@ class CategorizedListbox(Frame): #AKA CLB
         rc_menu.add_separator()
         rc_menu.add_cascade(label='Merge Category...', menu=merge_menu)
         merge_menu.add_command(label='Merge Category Here Into Upper',
-                            command=lambda i=i:self.merge_up(modlist_index))
+                            command=lambda :self.merge_up(modlist_index))
         merge_menu.add_command(label='Merge Category Here Into Lower',
-                            command=lambda i=i:self.merge_down(modlist_index))
+                            command=lambda :self.merge_down(modlist_index))
         if modlist_index == 0:
             merge_menu.entryconfig('Merge Category Here Into Upper',
                                    state='disabled')
@@ -476,8 +517,11 @@ class CategorizedListbox(Frame): #AKA CLB
                             command=lambda: self.delete_all_cat(modlist_index))
         remove_menu.add_command(label='Remove Category Here',
                             command=lambda : self.delete_confirm(modlist_index))
+        remove_menu.add_command(label='Remove Selected Categories',
+                            command=lambda : self.delete_selected())
         remove_menu.add_command(label='Remove All Mods',
                             command=self.delete_all_mods)
+        #Disables the appropriate menu options
         if len(modlist.modlabel_list) == 0:
             remove_menu.entryconfig('Remove Mod Here', state='disabled')
             remove_menu.entryconfig('Remove All In Category', state='disabled')
@@ -486,15 +530,18 @@ class CategorizedListbox(Frame): #AKA CLB
                                     state='disabled')
             links_menu.entryconfig('Open All Mod Links in Category Here',
                                     state='disabled')
+        if len(self.selected_modlists) == 0:
+            remove_menu.entryconfig('Remove Selected Categories',
+                                    state='disabled')
         #Selects and deselects appropriate mods and categories
         i = 0
         for modlist in self.modlists:
             i += len(modlist.selected_modlabel_list)
-            if i == 0:
-                links_menu.entryconfig('Open Selected Mod Links',
-                                       state='disabled')
-            modlist.onClickEvent(event)
+##            modlist.onClickEvent(event)
             modlist.rightClickMenu(event, rc_menu)
+        if i == 0:
+            links_menu.entryconfig('Open Selected Mod Links',
+                                   state='disabled')
 
 
     def view_conflicts(self, modlist_index, mod_index):
@@ -517,8 +564,14 @@ class CategorizedListbox(Frame): #AKA CLB
             modlist.open_selected_links()
 
     def update_color(self, modlist_index, mod_index, color, state='normal'):
+        '''Update a single mod's label color'''
         self.modlists[modlist_index].modlabel_list[ \
             mod_index].update_color(color,state)
+
+    def update_selected_colors(self, color, state='normal'):
+        for modlist in self.modlists:
+            for mod in modlist.selected_modlabel_list:
+                mod.update_color(color, state)
 
     def manage_incomp(self, modlist_index, mod_index):
         l = self.modlists[modlist_index].modlabel_list[mod_index].incompatibilities

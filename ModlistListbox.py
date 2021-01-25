@@ -308,7 +308,8 @@ class ModlistListbox(Frame):
             for x in range(len(self.modlabel_list)):
                 # checks every modlabel for a valid multi-selection activation
                 if self.modlabel_list[x].is_index_focused:
-                    #checks whether the index of the target modlabel above or below origin, then performs the multi-selection accordingly
+                    #checks whether the index of the target modlabel is above
+                    #or below origin, then multi-selects accordingly
                     if (x - origin) > 0:
                         for y in range(origin,x+1):
                             self.selected_modlabel_list.append(self.modlabel_list[y])
