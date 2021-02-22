@@ -119,7 +119,7 @@ class CategorizedListbox(Frame): #AKA CLB
                                 'You cannot delete all the categories in the '
                                 'list. There must always be at least one.',
                                 icon = 'warning')
-        else:
+        elif len(self.selected_modlists) > 0:
             msgBox = messagebox.askquestion ('Removing Selected Categories',
                                              'Remove all selected categories '
                                              'and their contents?',
@@ -162,13 +162,18 @@ class CategorizedListbox(Frame): #AKA CLB
         if msgBox == 'yes':
             self.modlists[modlist_index].delete(mod_index)
 
-    def delete_selected_mod(self):
-        msgBox = messagebox.askquestion ('Removing Selected',
-                                         'Remove selected mods from the list?',
-                                         icon = 'warning')
-        if msgBox == 'yes':
-            for modlist in self.modlists:
-                modlist.delete_selected()
+    def delete_selected_mod(self, event=None):
+        selection_exists = False
+        for modlist in self.modlists:
+            if len(modlist.selected_modlabel_list) > 0:
+                selection_exists = True
+        if selection_exists:
+            msgBox = messagebox.askquestion ('Removing Selected',
+                                             'Remove selected mods from the list?',
+                                             icon = 'warning')
+            if msgBox == 'yes':
+                for modlist in self.modlists:
+                    modlist.delete_selected()
 
     def delete_all_mods(self):
         msgBox = messagebox.askquestion ('Removing All',

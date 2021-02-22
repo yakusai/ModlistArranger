@@ -6,12 +6,13 @@ import os
 import ast
 import webbrowser
 import requests
+from contextlib import redirect_stderr
 from ParseURL import ParseURL
 from CategorizedListbox import CategorizedListbox
 from OptionDialog import OptionDialog
 
 #Determine current version number
-version = 1.3
+version = 1.4
 latest_url = 'https://github.com/yakusai/ModlistArranger/releases/latest/'
 download_url = 'https://www.nexusmods.com/skyrimspecialedition/mods/44323?tab=files'
 
@@ -269,6 +270,7 @@ class Main(Frame):
         parent.bind_all('<Control-f>', self.focus_filter)
         self.canvas.bind_all('<Up>', self.modlistbox.moveSelectionUp)
         self.canvas.bind_all('<Down>', self.modlistbox.moveSelectionDown)
+        self.canvas.bind_all('<Delete>', self.context_delete)
         #update mod count binds
         self.after(100, self.update_count)
 
@@ -430,6 +432,13 @@ class Main(Frame):
             for modlist in self.modlistbox.modlists:
                 modlist.selectAll()
 
+    def context_delete(self, event=None):
+        if len(self.modlistbox.selected_modlists) > 0:
+            self.modlistbox.delete_selected()
+        else:
+            self.modlistbox.delete_selected_mod()
+
+    #Automated Methods
     def update_count(self, event=None):
         '''Updates the mod count, and also the unsaved changes indicator'''
         #Gets the colors flagged as non-mods
@@ -569,7 +578,7 @@ class Main(Frame):
             self._save_path()
             self.basename = os.path.basename(file)
             d = []
-            with open(file, 'r') as f:
+            with open(file, 'r', encoding='utf-8') as f:
                 data = f.read().splitlines()
             get_notes = False
             self.notes = ''
@@ -604,7 +613,7 @@ class Main(Frame):
             
     def _save(self,file):
         if file:
-            with open(file, 'w') as f:
+            with open(file, 'w', encoding="utf-8") as f:
                 f.write(self._get_data())
             self.path = os.path.dirname(file)
             self._save_path()
@@ -679,6 +688,7 @@ class Main(Frame):
         data = self._get_data()
         if data != self.original_data:
             self.root.title(self.name+'*'+self.basename+'*')
+            
 
     def open_modlist_notes(self, event=None):
         '''Creates a textbox to edit modlist notes in'''
@@ -764,7 +774,9 @@ def check_for_updates(notifyHasLatest=False):
 
 
 if __name__ == '__main__':
-    root = Tk()
-    Main(root)
-    check_for_updates()
-    root.mainloop()
+##    with open(os.getcwd()+'\log.txt', 'w') as f:
+##        with redirect_stderr(f):
+            root = Tk()
+            Main(root)
+            check_for_updates()
+            root.mainloop()
