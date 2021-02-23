@@ -6,13 +6,15 @@ import os
 import ast
 import webbrowser
 import requests
+import configparser
+import time
 from contextlib import redirect_stderr
 from ParseURL import ParseURL
 from CategorizedListbox import CategorizedListbox
 from OptionDialog import OptionDialog
 
 #Determine current version number
-version = 1.4
+version = 1.5
 latest_url = 'https://github.com/yakusai/ModlistArranger/releases/latest/'
 download_url = 'https://www.nexusmods.com/skyrimspecialedition/mods/44323?tab=files'
 
@@ -124,6 +126,9 @@ class Main(Frame):
         self.file_menu.add_command(label='Save As...',
                                    command=self.saveas_command,
                                    accelerator='Ctrl+Shift+S')
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label='Import MO2 modlist...',
+                                   command=self.import_mo2_command)
         self.file_menu.add_separator()
         self.file_menu.add_command(label='Exit', command=self.exit_command,
                                    accelerator='Ctrl+Q')
@@ -335,11 +340,12 @@ class Main(Frame):
     def set_scroll(self, event):
         '''reset the scroll region to encompass the inner frame'''
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.canvas.update()
 
     def resize_canvas_width(self, event):
         '''resizes the canvas windows' width properly'''
         self.canvas.itemconfig(self.window, width = event.width-5)
-
+        
     #Mouse Methods
     def on_mousewheel(self, event):
         '''scrolls the vertical view by a number of units'''
@@ -347,6 +353,7 @@ class Main(Frame):
         widget = self.root.winfo_containing(x,y)
         if widget is self.canvas or widget in self._get_all_children(self.canvas):
             self.canvas.yview_scroll(int(2*(-1*(event.delta/120))), "units")
+        self.canvas.update()
 
     def on_click(self, event):
         #Get widget type under mouse
@@ -569,7 +576,7 @@ class Main(Frame):
             return
         file = filedialog.askopenfilename(initialdir = self.path, title='Open',
                                           filetypes=(('Modlist Arranger List Files','*.malist'),
-                                                     ('all files','*.*')))
+                                                     ('All Files','*.*')))
         self._load(file)
 
     def _load(self, file):
@@ -624,7 +631,7 @@ class Main(Frame):
     def saveas_command(self,event=None):
         if self.notebox is not None:
             self._close_notes(self.notebox.master)
-        file = filedialog.asksaveasfilename(initialdir = self.path,title ='Save As', filetypes = (('Modlist Arranger List Files','*.malist'),('all files','*.*')), defaultextension='.malist')
+        file = filedialog.asksaveasfilename(initialdir = self.path,title ='Save As', filetypes = (('Modlist Arranger List Files','*.malist'),('All Files','*.*')), defaultextension='.malist')
         if file:
             self._save(file)
         return file
@@ -710,6 +717,101 @@ class Main(Frame):
         self.notes = self.notebox.get('1.0', END).rstrip()+'\n'
         self.notebox = None
         frame.destroy()
+
+    #====MO2 Handling Methods====
+
+    def import_mo2_command(self):
+        msgBox = messagebox.askquestion ('Import MO2 modlist?',
+                                         'This will create a new category named '
+                                         '"MO2", which will store a list of ALL '
+                                         'mods found from your selected MO2 '
+                                         'profile, in order (disabled mods '
+                                         'will be colored in red). Continue?',
+                                         icon = 'warning')
+        if msgBox == 'yes':
+            directory = filedialog.askdirectory(initialdir = self.path,
+                                           title="Select Your Mod Organizer "
+                                           "Profile Directory (Inside Your "
+                                           "Mod Organizer Install Folder")
+            if directory != '':
+                file = directory+'/modlist.txt'
+                modlist = []
+                #open the modlist.txt file
+                try:
+                    with open(file, 'r', encoding='utf-8') as f:
+                        data = f.read().splitlines()
+                except FileNotFoundError:
+                    messagebox.showinfo('Invalid Directory', 'No valid profile data found.')
+                    return
+                #disables the canvas from drawing while importing
+                self.canvas.pack_forget()
+                #create the MO2 category
+                self.modlistbox.insert(END, 'MO2')
+                #get the mods directory for MO2
+                mods_directory = os.path.dirname(os.path.dirname(os.path.dirname(file)))\
+                                 + '/mods/'
+                for line in data:
+                    mod_name = line[1:]
+                    info = []
+                    #add each mod in the modlist, and set disabled mods to red
+                    if line[0] == '+' or line[0] == '-':
+                        #Set the config parser and get the mod id
+                        configParser = configparser.RawConfigParser()
+                        configParser.read(mods_directory+mod_name+'/meta.ini')
+                        modid = configParser.get('General', 'modid')
+                        #handle non-nexus mods
+                        if modid == '0':
+                            info.append('https://www.google.com/')
+                            info.append(mod_name)
+                            info.append('')
+                            info.append('This is a non-nexus mod. Its link '
+                                        'will open to Google.')
+                            info.append('')
+                            info.append('Non-Nexus')
+                            #if mod is disabled in MO2, set it to red
+                            if line[0] == '-':
+                                info.append('red')
+                        #handle nexus mods
+                        else:
+                            gameName = configParser.get('General','gameName')
+                            #format the url correctly for each game type
+                            if gameName == 'SkyrimSE' or gameName == 'SkyrimVR':
+                                game_name = 'skyrimspecialedition'
+                            elif gameName == 'Skyrim':
+                                game_name = 'skyrim'
+                            elif gameName == 'Fallout 4' or gameName == 'FO4VR':
+                                game_name = 'fallout4'
+                            elif gameName == 'Fallout 3':
+                                game_name = 'fallout3'
+                            elif gameName == 'Fallout NV' or gameName == 'TTW':
+                                game_name = 'newvegas'
+                            elif gameName == 'Oblivion':
+                                game_name = 'oblivion'
+                            elif gameName == 'Morrowind':
+                                game_name = 'morrowind'
+                            else:
+                                game_name = gameName
+                            game_url = 'https://www.nexusmods.com/{}/mods/{}'.format(game_name, modid)
+                            #populate the mod info
+                            info.append(game_url)
+                            info.append(mod_name)
+                            info.append(gameName)
+                            info.append('')
+                            info.append('')
+                            info.append('Nexus')
+                            #if mod is disabled in MO2, set it to red
+                            if line[0] == '-':
+                                info.append('red')
+                        #insert the mod
+                        self.modlistbox.modlists[-1].insert(0,info)
+                        self.update_idletasks()
+                #re-enable the canvas draw
+                self.canvas.pack(side='left',fill='both',expand=True)
+                messagebox.showinfo('Import Complete', 'MO2 import complete. Non-nexus'
+                                    ' mods will be labeled as such in their '
+                                    'descriptions, and mods disabled in MO2 '
+                                    'will be colored in red. Please ensure all'
+                                    'mods look correct.')
 
     #====Misceallaneous Methods====
 
